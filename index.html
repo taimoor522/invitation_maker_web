@@ -5,19 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>You're Invited!</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase JavaScript SDK CDN -->
+    <script src="https://jsdelivr.net"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center;
             padding: 20px;
             background-color: #f4f4f7;
             margin: 0;
-            min-height: 100vh;
         }
 
         .container {
@@ -29,33 +25,31 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
+        /* Style for your new invitation text */
         .invitation-text {
             font-size: 18px;
             color: #333;
-            line-height: 1.6;
-            margin-bottom: 24px;
+            line-height: 1.5;
+            margin-bottom: 20px;
             font-weight: 500;
-            text-align: left;
         }
 
         .highlight {
-            font-weight: 700;
+            font-weight: bold;
             color: #16a34a;
         }
 
-        .card-image {
-            width: 100%;
+        img {
+            max-width: 100%;
             height: auto;
             border-radius: 8px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            display: none;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
-        .rsvp-section h3 {
+        h3 {
             color: #333;
-            margin: 0 0 16px;
-            font-size: 20px;
+            margin-top: 0;
         }
 
         input,
@@ -63,7 +57,8 @@
         button {
             display: block;
             width: 100%;
-            margin: 0 0 12px;
+            box-sizing: border-box;
+            margin: 12px auto;
             padding: 12px;
             font-size: 16px;
             border-radius: 6px;
@@ -83,180 +78,134 @@
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s;
-            margin-bottom: 0;
         }
 
-        button:hover:not(:disabled) {
+        button:hover {
             background-color: #16a34a;
         }
 
-        button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .success-message {
-            display: none;
-            padding: 24px 16px;
-            font-size: 20px;
-            font-weight: 700;
-            color: #16a34a;
-        }
-
-        .error-message {
-            color: #dc2626;
-            font-weight: 600;
-            margin-top: 12px;
-        }
-
-        .loading {
-            color: #666;
-            font-size: 16px;
+        #message {
+            font-weight: bold;
+            margin-top: 15px;
         }
     </style>
 </head>
 
 <body>
+
     <div class="container">
-        <div id="invitation-header" class="invitation-text loading">
-            Loading invitation details...
-        </div>
+        <!-- 1. NEW: The dynamic text header placeholder -->
+        <div id="invitation-header" class="invitation-text">Loading invitation details...</div>
 
-        <img id="card-image" class="card-image" src="" alt="Event invitation card">
+        <!-- 2. Displays the host's invitation card design -->
+        <img id="card-image" src="" alt="Loading Invitation..." style="display:none;">
 
-        <div id="rsvp-section" class="rsvp-section">
-            <form id="rsvp-form">
-                <h3>RSVP to this Event</h3>
-                <input type="text" id="guest-name" placeholder="Enter your full name" required>
-                <select id="rsvp-status" required>
-                    <option value="attending">I will attend</option>
-                    <option value="declined">I cannot make it</option>
-                </select>
-                <button type="submit" id="submit-btn">Submit Response</button>
-            </form>
-            <div id="error-message" class="error-message"></div>
-        </div>
+        <!-- 3. Simplified RSVP Web Form -->
+        <form id="rsvp-form">
+            <h3>RSVP to this Event</h3>
+            <input type="text" id="guest-name" placeholder="Enter Your Full Name" required>
+            <select id="rsvp-status">
+                <option value="attending">🎉 I will attend</option>
+                <option value="declined">😢 I cannot make it</option>
+            </select>
+            <button type="submit" id="submit-btn">Submit Response</button>
+        </form>
 
-        <div id="success-message" class="success-message">
-            Response Sent to Inviter
-        </div>
+        <div id="message"></div>
     </div>
 
     <script>
-        const INVITER_NAME = 'Taimoor Ghafar';
-        const SUPABASE_URL = 'https://iuemkjbyqzkdnvnavuuk.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_SRHFQIBUOReqrkPRx2igUA_vQp_rlj6';
+        // REPLACE THESE WITH YOUR ACTUAL SUPABASE CREDENTIALS
+        const SUPABASE_URL = "https://supabase.co";
+        const SUPABASE_ANON_KEY = "your-anon-public-key";
 
-        const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialize the Supabase Client
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // Extract the unique Event ID from the URL parameters (?id=xxx)
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('id');
+        const messageDiv = document.getElementById('message');
         const headerElement = document.getElementById('invitation-header');
-        const cardImage = document.getElementById('card-image');
-        const rsvpSection = document.getElementById('rsvp-section');
-        const successMessage = document.getElementById('success-message');
-        const errorMessage = document.getElementById('error-message');
-        const rsvpForm = document.getElementById('rsvp-form');
-        const submitBtn = document.getElementById('submit-btn');
 
-        function getEventId() {
-            const queryId = new URLSearchParams(window.location.search).get('id');
-            if (queryId) return queryId;
-
-            const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const lastSegment = pathParts[pathParts.length - 1];
-
-            if (lastSegment && lastSegment !== 'index.html') {
-                return lastSegment;
-            }
-
-            return null;
-        }
-
-        function formatEventDate(eventDate) {
-            if (!eventDate) return 'TBD';
-
-            return new Date(eventDate).toLocaleDateString(undefined, {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            });
-        }
-
-        function buildInvitationText(event) {
-            const eventName = event.title || 'the event';
-            const eventDate = formatEventDate(event.event_date);
-            const eventLocation = event.location || 'the specified location';
-
-            return `${INVITER_NAME} invited you on <span class="highlight">${eventName}</span> held on <span class="highlight">${eventDate}</span> as <span class="highlight">${eventLocation}</span>.`;
-        }
-
-        function showInvalidLink(message) {
-            document.querySelector('.container').innerHTML =
-                `<h2 style="color:#dc2626;">${message}</h2>`;
-        }
-
+        // Fetch the event card and text from your database automatically on load
         async function loadEventData() {
-            const eventId = getEventId();
-
             if (!eventId) {
-                showInvalidLink('Invalid link. No event ID found.');
+                document.body.innerHTML = "<h2>⚠️ Invalid Link. No Event ID found.</h2>";
                 return;
             }
 
-            const { data, error } = await supabaseClient
+            // Updated query to pull title, event_date, location, and image_url
+            const { data, error } = await supabase
                 .from('events')
                 .select('title, event_date, location, image_url')
                 .eq('id', eventId)
                 .single();
 
-            if (error || !data) {
-                showInvalidLink('Invitation not found.');
-                return;
-            }
+            if (data) {
+                // Format the timestamp into a human-readable date string
+                let formattedDate = "TBD";
+                if (data.event_date) {
+                    const dateObj = new Date(data.event_date);
+                    formattedDate = dateObj.toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
 
-            headerElement.classList.remove('loading');
-            headerElement.innerHTML = buildInvitationText(data);
+                // Inject the custom greeting text at the top of the container
+                headerElement.innerHTML = `Taimoor Ghafar invited you to <span class="highlight">${data.title || 'the event'}</span> held on <span class="highlight">${formattedDate}</span> at <span class="highlight">${data.location || 'the specified location'}</span>.`;
 
-            if (data.image_url) {
-                cardImage.src = data.image_url;
-                cardImage.style.display = 'block';
+                // Display the card PNG image
+                if (data.image_url) {
+                    const imgElement = document.getElementById('card-image');
+                    imgElement.src = data.image_url;
+                    imgElement.style.display = 'block';
+                }
+            } else {
+                document.body.innerHTML = "<h2>⚠️ Invitation card not found!</h2>";
             }
         }
 
-        rsvpForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
+        loadEventData();
 
-            const eventId = getEventId();
-            const guestName = document.getElementById('guest-name').value.trim();
+        // Handle RSVP Form Submission (Simple Insert Logic)
+        document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-btn');
+            const name = document.getElementById('guest-name').value;
             const status = document.getElementById('rsvp-status').value;
 
-            if (!guestName) return;
-
+            // Disable button during network request
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Saving...';
-            errorMessage.textContent = '';
+            submitBtn.innerText = "Saving...";
 
-            const { error } = await supabaseClient.from('rsvps').insert({
-                event_id: eventId,
-                guest_name: guestName,
-                status: status,
-            });
+            // Straightforward database row addition
+            const { error } = await supabase
+                .from('rsvps')
+                .insert({
+                    event_id: eventId,
+                    guest_name: name,
+                    status: status
+                });
 
             if (error) {
-                errorMessage.textContent = 'Error: ' + error.message;
+                messageDiv.style.color = "red";
+                messageDiv.innerText = "Error: " + error.message;
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Response';
-                return;
+                submitBtn.innerText = "Submit Response";
+            } else {
+                messageDiv.style.color = "green";
+                messageDiv.innerText = "Thank you! Your response has been recorded.";
+                document.getElementById('rsvp-form').reset();
+                submitBtn.innerText = "Submitted!";
             }
-
-            rsvpSection.style.display = 'none';
-            successMessage.style.display = 'block';
         });
-
-        loadEventData();
     </script>
 </body>
 
