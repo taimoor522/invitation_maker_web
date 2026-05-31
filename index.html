@@ -25,11 +25,26 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
+        /* Style for your new invitation text */
+        .invitation-text {
+            font-size: 18px;
+            color: #333;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #16a34a;
+        }
+
         img {
             max-width: 100%;
             height: auto;
             border-radius: 8px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         h3 {
@@ -79,10 +94,13 @@
 <body>
 
     <div class="container">
-        <!-- 1. Displays the host's invitation card design -->
+        <!-- 1. NEW: The dynamic text header placeholder -->
+        <div id="invitation-header" class="invitation-text">Loading invitation details...</div>
+
+        <!-- 2. Displays the host's invitation card design -->
         <img id="card-image" src="" alt="Loading Invitation..." style="display:none;">
 
-        <!-- 2. Simplified RSVP Web Form -->
+        <!-- 3. Simplified RSVP Web Form -->
         <form id="rsvp-form">
             <h3>RSVP to this Event</h3>
             <input type="text" id="guest-name" placeholder="Enter Your Full Name" required>
@@ -101,37 +119,59 @@
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_ANON_KEY = "your-anon-public-key";
 
-        // FIX: Removed the '@' symbol from the client initialization
+        // Initialize the Supabase Client
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Extract the unique Event ID from the URL parameters (?id=xxx)
         const urlParams = new URLSearchParams(window.location.search);
         const eventId = urlParams.get('id');
         const messageDiv = document.getElementById('message');
+        const headerElement = document.getElementById('invitation-header');
 
-        // Fetch the event card from your database automatically on load
-        async function loadCard() {
+        // Fetch the event card and text from your database automatically on load
+        async function loadEventData() {
             if (!eventId) {
                 document.body.innerHTML = "<h2>⚠️ Invalid Link. No Event ID found.</h2>";
                 return;
             }
 
+            // Updated query to pull title, event_date, location, and image_url
             const { data, error } = await supabase
                 .from('events')
-                .select('image_url')
+                .select('title, event_date, location, image_url')
                 .eq('id', eventId)
                 .single();
 
-            if (data && data.image_url) {
-                const imgElement = document.getElementById('card-image');
-                imgElement.src = data.image_url;
-                imgElement.style.display = 'block';
+            if (data) {
+                // Format the timestamp into a human-readable date string
+                let formattedDate = "TBD";
+                if (data.event_date) {
+                    const dateObj = new Date(data.event_date);
+                    formattedDate = dateObj.toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                // Inject the custom greeting text at the top of the container
+                headerElement.innerHTML = `Taimoor Ghafar invited you to <span class="highlight">${data.title || 'the event'}</span> held on <span class="highlight">${formattedDate}</span> at <span class="highlight">${data.location || 'the specified location'}</span>.`;
+
+                // Display the card PNG image
+                if (data.image_url) {
+                    const imgElement = document.getElementById('card-image');
+                    imgElement.src = data.image_url;
+                    imgElement.style.display = 'block';
+                }
             } else {
                 document.body.innerHTML = "<h2>⚠️ Invitation card not found!</h2>";
             }
         }
 
-        loadCard();
+        loadEventData();
 
         // Handle RSVP Form Submission (Simple Insert Logic)
         document.getElementById('rsvp-form').addEventListener('submit', async (e) => {
@@ -167,7 +207,6 @@
             }
         });
     </script>
-
 </body>
 
 </html>
