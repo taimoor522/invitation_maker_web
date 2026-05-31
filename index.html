@@ -126,7 +126,6 @@
 
         <div id="rsvp-section" class="rsvp-section">
             <form id="rsvp-form">
-                <h3>RSVP to this Event</h3>
                 <input type="text" id="guest-name" placeholder="Enter your full name" required>
                 <select id="rsvp-status" required>
                     <option value="attending">I will attend</option>
@@ -139,6 +138,11 @@
 
         <div id="success-message" class="success-message">
             Response Sent to Inviter
+        </div>
+
+        <div id="already-responded" style="display:none; padding: 24px 16px;">
+            <p style="font-size: 20px; font-weight: 700; color: #16a34a;">✅ Already Responded</p>
+            <p style="color: #555; font-size: 15px;">You've already submitted your response to this invitation.</p>
         </div>
     </div>
 
@@ -190,12 +194,24 @@
             const eventDate = formatEventDate(event.event_date);
             const eventLocation = event.location || 'the specified location';
 
-            return `${INVITER_NAME} invited you on <span class="highlight">${eventName}</span> held on <span class="highlight">${eventDate}</span> as <span class="highlight">${eventLocation}</span>.`;
+            return `${INVITER_NAME} invited you on <span class="highlight">${eventName}</span> held on <span class="highlight">${eventDate}</span> at <span class="highlight">${eventLocation}</span>.`;
         }
 
         function showInvalidLink(message) {
             document.querySelector('.container').innerHTML =
                 `<h2 style="color:#dc2626;">${message}</h2>`;
+        }
+
+        function getStorageKey(eventId) {
+            return `rsvp_submitted_${eventId}`;
+        }
+
+        function checkAlreadyResponded(eventId) {
+            return localStorage.getItem(getStorageKey(eventId)) === 'true';
+        }
+
+        function markAsResponded(eventId) {
+            localStorage.setItem(getStorageKey(eventId), 'true');
         }
 
         async function loadEventData() {
@@ -224,6 +240,12 @@
                 cardImage.src = data.image_url;
                 cardImage.style.display = 'block';
             }
+
+            // Check if user already responded on this device
+            if (checkAlreadyResponded(eventId)) {
+                rsvpSection.style.display = 'none';
+                document.getElementById('already-responded').style.display = 'block';
+            }
         }
 
         rsvpForm.addEventListener('submit', async (event) => {
@@ -251,6 +273,9 @@
                 submitBtn.textContent = 'Submit Response';
                 return;
             }
+
+            // Save to localStorage so refreshing won't allow re-submission
+            markAsResponded(eventId);
 
             rsvpSection.style.display = 'none';
             successMessage.style.display = 'block';
