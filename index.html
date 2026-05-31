@@ -194,7 +194,7 @@
             const eventDate = formatEventDate(event.event_date);
             const eventLocation = event.location || 'the specified location';
 
-            return `${INVITER_NAME} invited you on <span class="highlight">${eventName}</span> held on <span class="highlight">${eventDate}</span> at <span class="highlight">${eventLocation}</span>.`;
+            return `<h2>Your Invitation</h2>${INVITER_NAME} invited you on <span class="highlight">${eventName}</span> held on <span class="highlight">${eventDate}</span> at <span class="highlight">${eventLocation}</span>.`;
         }
 
         function showInvalidLink(message) {
